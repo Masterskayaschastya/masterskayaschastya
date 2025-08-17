@@ -230,6 +230,27 @@
   }
 }
 </style>
+
+<style>
+.site-footer {
+  background-color: #e5d4f5;
+  padding: 20px;
+  text-align: center;
+  margin-top: 40px;
+  border-top: 2px solid #d8b4e2;
+}
+.site-footer a {
+  color: #6a1b9a;
+  text-decoration: none;
+  font-weight: bold;
+}
+.site-footer a:hover {
+  text-decoration: underline;
+}
+/* make sure footer stays above page background and below modals */
+.site-footer { position: relative; z-index: 1; }
+</style>
+
 </head>
 <body>
 <header><div style="display:flex; align-items:center; justify-content:center; gap:15px; flex-wrap:wrap;"><img loading="lazy" alt="Логотип" src="assets/images/logo.jpg" style="height:60px; vertical-align:middle; margin-right:15px;"/><h1 style="margin: 0;">Мастерская счастья</h1></div></header>
@@ -267,7 +288,7 @@
 <img loading="lazy" alt="Мягкие игрушки" src="assets/images/toys11.jpeg"/>
 <h3>Мягкие игрушки</h3>
 </div>
-<div class="catalog-item" onclick="openModal('boxesModal')"><img loading="lazy" alt="Шкатулки" src="assets/images/p.jpeg"/><h3>Шкатулки</h3></div><div class="catalog-item" onclick="openModal('souvenirsModal')"><img loading="lazy" alt="Сувениры" src="assets/images/gift.jpeg"/><h3>Сувениры</h3></div><div class="catalog-item" onclick="openModal('christmasModal')"><img loading="lazy" alt="Ёлочные игрушки" src="assets/images/chris1.jpeg"/><h3>Ёлочные игрушки</h3></div></section>
+<div class="catalog-item" onclick="openModal('boxesModal')"><img loading="lazy" alt="Шкатулки" src="assets/images/p.png"/><h3>Шкатулки</h3></div><div class="catalog-item" onclick="openModal('souvenirsModal')"><img loading="lazy" alt="Сувениры" src="assets/images/gift.jpeg"/><h3>Сувениры</h3></div><div class="catalog-item" onclick="openModal('christmasModal')"><img loading="lazy" alt="Ёлочные игрушки" src="assets/images/chris1.jpeg"/><h3>Ёлочные игрушки</h3></div></section>
 <!-- Модальные окна -->
 <style>
   .product-list {
@@ -436,21 +457,13 @@ function downloadReceipt(orderText) {
 function openModal(id) {
   // Close all modals
   document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-  // Find the exact modal by id
-  var el = document.getElementById(id);
+  const el = document.getElementById(id);
   if (!el) {
     console.warn('Modal not found:', id);
     return;
   }
   el.style.display = 'block';
   document.body.style.overflow = 'hidden';
-} else {
-    el = document.getElementById(id);
-  }
-  if (el) {
-    el.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-  }
 }
 
 function closeModal(id) {
@@ -603,66 +616,62 @@ function applyPromo() {
 </script>
 
 <div class="modal" id="bagsModal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('bagsModal')">&times;</span>
-    <h2>Вязаные сумки</h2>
-    <div class="product-list">
-      <p style="text-align:center;">Товары скоро будут добавлены...</p>
-    </div>
+<div class="modal-content">
+<span class="close" onclick="closeModal('bagsModal')">×</span>
+<h2>Вязаные сумки</h2>
+<div class="product-list">
+<div class="product-card">
+<img loading="lazy" alt="Сумка из полиэфирного шнура «Рыжик»" src="assets/images/bags1.jpg"/>
+<h4>Сумка из полиэфирного шнура «Рыжик»</h4>
+<p>Размеры 25*20, ремень 100 см<br/>🔴 Под заказ<br/>Цена: 2800 ₽</p>
+<button onclick="addToCart('Сумка из полиэфирного шнура «Рыжик»', 2800)" type="button">Добавить в корзину</button>
+</div>
   </div>
 </div>
 <div class="modal" id="basketsModal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('basketsModal')">&times;</span>
-    <h2>Корзинки</h2>
-    <div class="product-list">
-      <p style="text-align:center;">Товары скоро будут добавлены...</p>
-    </div>
+<div class="modal-content">
+<span class="close" onclick="closeModal('basketsModal')">×</span>
+<h2>Корзинки</h2>
+<div class="product-list"><div class="product-card"><img loading="lazy" alt="«Чайная роза»" src="assets/images/b1.jpeg"/><h4>«Чайная роза»</h4><p>Полиэфирный шнур, дерево
+🔴 Под заказ
+Цена: 1800 ₽</p><button onclick="addToCart('«Чайная роза»', 1800)" type="button">Добавить в корзину</button></div>
   </div>
 </div>
 <div class="modal" id="teaSetModal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('teaSetModal')">&times;</span>
-    <h2>Наборы для чаепития</h2>
-    <div class="product-list">
-      <p style="text-align:center;">Товары скоро будут добавлены...</p>
-    </div>
+<div class="modal-content">
+<span class="close" onclick="closeModal('teaSetModal')">×</span>
+<h2>Наборы для чаепития</h2>
+<div class="product-list"><div class="product-card"><img loading="lazy" alt="Набор для чаепития «Горячий шоколад»" src="assets/images/tea-sets.jpeg"/><h4>Набор для чаепития «Горячий шоколад»</h4><p>Подставка под чайник -19 см,4 подставки под чашки- 14 см. Полиэфирный шнур, дерево
+🟢 В наличии
+Цена: 1800 ₽</p><button onclick="addToCart('Набор для чаепития «Горячий шоколад»', 1800)" type="button">Добавить в корзину</button></div>
   </div>
 </div>
 <div class="modal" id="softToysModal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('softToysModal')">&times;</span>
-    <h2>Мягкие игрушки</h2>
-    <div class="product-list">
-      <p style="text-align:center;">Товары скоро будут добавлены...</p>
-    </div>
+<div class="modal-content">
+<span class="close" onclick="closeModal('softToysModal')">×</span>
+<h2>Мягкие игрушки</h2>
+<div class="product-list"><div class="product-card"><img loading="lazy" alt="Таракан Кузьма" src="assets/images/toys1.jpeg"/><h4>Таракан Кузьма</h4><p>Размер 11 см Валяная игрушка Натуральная шерсть
+🟢 В наличии
+Цена: 1200 ₽</p><button onclick="addToCart('Таракан Кузьма', 1200)" type="button">Добавить в корзину</button></div>
   </div>
 </div>
 <div class="modal" id="boxesModal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('boxesModal')">&times;</span>
-    <h2>Шкатулки</h2>
-    <div class="product-list">
-      <p style="text-align:center;">Товары скоро будут добавлены...</p>
-    </div>
+<div class="modal-content">
+<span class="close" onclick="closeModal('boxesModal')">×</span>
+<h2>Шкатулки</h2>
+<div class="product-list" id="boxesPage1"><div class="product-card"><img loading="lazy" alt="Щелкунчик" src="assets/images/p1.png"/><h4>«Щелкунчик»</h4><p>Размер: 15*20*9
+🟢 В наличии
+Цена: 1700 ₽</p><button onclick="addToCart('Шкатулка Щелкунчик', 1700)" type="button">Добавить в корзину</button></div>
   </div>
 </div>
-<div class="modal" id="souvenirsModal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('souvenirsModal')">&times;</span>
-    <h2>Сувениры</h2>
-    <div class="product-list">
-      <p style="text-align:center;">Товары скоро будут добавлены...</p>
-    </div>
+<div class="modal" id="souvenirsModal"><div class="modal-content"><span class="close" onclick="closeModal('souvenirsModal')">×</span><h2>Сувениры</h2><div class="product-list"><div class="product-card"><img loading="lazy" alt="«Пограничник» Чехол на бутылку" src="assets/images/gift1.jpeg"/><h4>«Пограничник» Чехол на бутылку</h4><p>Велюр, тесьма
+🔴 Под заказ
+Цена: Цена 1200</p><button onclick="addToCart('«Пограничник» Чехол на бутылку', 1200)" type="button">Добавить в корзину</button></div>
   </div>
 </div>
-<div class="modal" id="christmasModal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal('christmasModal')">&times;</span>
-    <h2>Ёлочные игрушки</h2>
-    <div class="product-list">
-      <p style="text-align:center;">Товары скоро будут добавлены...</p>
-    </div>
+<div class="modal" id="christmasModal"><div class="modal-content"><span class="close" onclick="closeModal('christmasModal')">×</span><h2>Ёлочные игрушки</h2><div class="product-list"><div class="product-card"><img loading="lazy" alt="Набор елочных игрушек «Белая птица» (бархат, тесьма, атласная лента,лебяжий пух, стразы, кружево)" src="assets/images/chris1.jpeg"/><h4>Набор елочных игрушек «Белая птица» (бархат, тесьма, атласная лента,лебяжий пух, стразы, кружево)</h4><p>Диаметр шаров 8 см.
+🟢 В наличии
+Цена: Цена комплекта из 3 шаров 1700</p><button onclick="addToCart('Набор елочных игрушек «Белая птица» (бархат, тесьма, атласная лента,лебяжий пух, стразы, кружево)',O00)" type="button">Добавить в корзину</button></div>
   </div>
 </div>
 <script>
@@ -685,5 +694,22 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 });
 </script>
+
+<footer class="site-footer">
+  <div class="footer-content">
+    <p>Связаться с владельцем сайта:</p>
+    <p>
+      📱 Телефон:
+      <a href="https://t.me/+79283469654" target="_blank">Telegram</a> |
+      <a href="https://wa.me/79283469654" target="_blank">WhatsApp</a>
+    </p>
+    <p>
+      🌐 ВКонтакте:
+      <a href="https://vk.com/annaanty" target="_blank">Страница 1</a> |
+      <a href="https://vk.com/annaanty" target="_blank">Страница 2</a>
+    </p>
+  </div>
+</footer>
+
 </body>
 </html>
