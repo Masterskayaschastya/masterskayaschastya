@@ -1725,7 +1725,38 @@ async function openQRCheckout() {
     alert("Корзина пуста. Добавьте товары перед оплатой.");
     return;
   }
-  
+  const cart = normalizeCart(raw);
+  const total = calcTotal(cart);
+  const orderId = makeOrderId();
+
+  var img = document.getElementById("qr-image");
+  if (!img) throw new Error("Не найден элемент картинки QR (qr-image)");
+  img.src = QR_IMAGE_SRC;
+
+  var elId1 = document.getElementById("qr-order-id");
+  if (elId1) elId1.textContent = orderId;
+  var elId2 = document.getElementById("qr-order-id-2");
+  if (elId2) elId2.textContent = orderId;
+  var elPlain = document.getElementById("qr-order-plain");
+  if (elPlain) elPlain.textContent = orderId;
+
+  var elTotal = document.getElementById("qr-total");
+  if (elTotal) elTotal.textContent = total.toFixed(0);
+
+  renderList(cart);
+
+  var fOrder = document.getElementById("f_order_id");
+  if (fOrder) fOrder.value = orderId;
+  var fTotal = document.getElementById("f_total_amount");
+  if (fTotal) fTotal.value = total.toFixed(0);
+  var fItems = document.getElementById("f_items");
+  if (fItems) fItems.value = serializeItems(cart);
+
+  var form = document.getElementById("qr-form");
+  if (form) form.action = FORMSPREE_ENDPOINT;
+
+  qrModal(true);
+}
 // Экспорт функций в глобальную область для inline-обработчиков
 try { window.openQRCheckout = openQRCheckout; } catch(e){}
 try { window.qrModal = qrModal; } catch(e){}
