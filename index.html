@@ -408,7 +408,7 @@ function prepareFormData(event) {
   lines.push('');
   lines.push(`Сумма: ${totals.subtotal}₽`);
   if (appliedPromo) {
-    lines.push(`Промокод: ${appliedPromo} (-10%)`);
+    lines.push(`Промокод: ${appliedPromo} (-20%)`);
     lines.push(`Скидка: -${totals.discount}₽`);
   }
   lines.push(`К оплате: ${totals.total}₽`);
@@ -570,7 +570,7 @@ function setPromoCode(code) {
 
 function getTotals() {
   const subtotal = (Array.isArray(cart) ? cart : []).reduce((s, it) => s + (Number(it.price)||0), 0);
-  const discount = appliedPromo ? Math.round(subtotal * 0.10) : 0;
+  const discount = appliedPromo ? Math.round(subtotal * 0.20) : 0;
   const total = Math.max(0, subtotal - discount);
   return { subtotal, discount, total };
 }
@@ -584,7 +584,7 @@ function updatePromoStatus() {
   const el = document.getElementById('promoStatus');
   if (!el) return;
   if (appliedPromo) {
-    el.textContent = 'Промокод применён: -10%';
+    el.textContent = 'Промокод применён: -20%';
     el.style.color = 'green';
   } else {
     el.textContent = '';
@@ -2485,7 +2485,7 @@ document.addEventListener('DOMContentLoaded', function(){
       // Сравниваем с PROMO_CODE, который уже есть в странице (например, 'Anna10')
       if (typeof PROMO_CODE !== 'undefined' && code.toUpperCase() === String(PROMO_CODE).toUpperCase()) {
         if (typeof appliedPromo !== 'undefined') appliedPromo = code;
-        if (status) { status.textContent = 'Промокод применён: -10%'; status.style.color = 'green'; }
+        if (status) { status.textContent = 'Промокод применён: -20%'; status.style.color = 'green'; }
       } else {
         if (typeof appliedPromo !== 'undefined') appliedPromo = null;
         if (status) { status.textContent = 'Неверный промокод'; status.style.color = 'red'; }
