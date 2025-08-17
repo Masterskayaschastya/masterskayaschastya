@@ -1626,11 +1626,21 @@ const QR_IMAGE_SRC = "assets/qr-sbp.png"; // ваш статический QR п
 const ORDER_PREFIX = "MS"; // префикс номера заказа
 
 /* === СОВМЕСТИМОСТЬ С ВАШЕЙ КОРЗИНОЙ === */
+
 function loadCart() {
   try {
     const ls = localStorage.getItem("cart");
     if (ls) return JSON.parse(ls);
   } catch(e){}
+  try {
+    if (typeof cart !== "undefined" && Array.isArray(cart)) return cart;
+  } catch(e){}
+  try {
+    if (typeof window !== "undefined" && Array.isArray(window.cart)) return window.cart;
+  } catch(e){}
+  return [];
+}
+ catch(e){}
   if (Array.isArray(window.cart)) return window.cart;
   return [];
 }
