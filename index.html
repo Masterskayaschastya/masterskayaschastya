@@ -269,6 +269,16 @@
       Впустите в свой дом Счастье.
     </p>
 </section>
+
+<section class="about">
+  <p>
+    Все изделия уникальны. Корзинки, шкатулки повторить возможно, при наличии материала.<br/>
+    В разделе "Сумки" повторов НЕТ. Но.. Если стоит помета "Под заказ", значит, Вы можете выбрать размер, цвет, рисунок, форму клапана.<br/>
+    Перед заказом наличие уточняйте в личных сообщениях. Сами клапаны НЕ повторяются.<br/>
+    На все Ваши вопросы обязательно отвечу в личных сообщениях. Контакты - ниже.
+  </p>
+</section>
+
 <section class="catalog" id="catalog">
 <div class="catalog-item" onclick="openModal('bagsModal')">
 <img alt="Вязаные сумки" loading="lazy" src="assets/images/bags125.jpeg"/>
@@ -321,7 +331,7 @@
 <input id="orderInput" name="order" type="hidden"/>
 <button id="qr-pay-btn" style="margin-top:8px;background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;width:100%;" type="button">Оплатить по QR (СБП)</button>
 <button style="display:none;" type="button">Оформить заказ</button>
-<button onclick="manualDownload()" type="button">Скачать чек</button>
+
 </div></form><script>
 let cart = [];
 
@@ -2058,6 +2068,7 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 <footer class="site-footer">
+<a id="contacts"></a>
 <div class="footer-content">
 <p>Связаться с владельцем сайта:</p>
 <p>
@@ -2327,16 +2338,133 @@ document.getElementById("qr-total").textContent = total.toFixed(0);
   qrModal(true);
 }
 
-/* === Обработчик отправки формы === */
-(function attachQRFormHandler(){
+
+/* === Обработчик отправки формы (Я оплатил(а)) — отправляем на Formspree и скачиваем чек === */
+(function attachQRFormHandlerEnhanced(){
   const form = document.getElementById("qr-form");
   if (!form) return;
-  form.addEventListener("submit", function(ev){
-    const btns = form.querySelectorAll("button");
-    btns.forEach(b=>b.disabled=true);
-    if (btns[1]) btns[1].textContent = "Отправляем...";
-  });
+  form.addEventListener("submit", async function(ev){
+    ev.preventDefault();
+    try {
+      // Disable buttons and show progress
+      const btns = form.querySelectorAll("button");
+      btns.forEach(b=>b.disabled=true);
+      const submitBtn = Array.from(btns).find(b => /я оплатил/i.test((b.textContent||"")));
+      if (submitBtn) submitBtn.textContent = "Отправляем...";
+
+      // Compose order details from available sources
+      function safeCart(){
+        try{
+          if (typeof cart !== "undefined" && Array.isArray(cart) && cart.length) return cart.map(it=>({name:it.name, price:Number(it.price)||0, qty: it.qty?Number(it.qty):1}));
+        }catch(e){}
+        try {
+          const ls = localStorage.getItem("cart");
+          if (ls) {
+            const arr = JSON.parse(ls);
+            if (Array.isArray(arr) && arr.length) return arr.map(it=>({name:it.name, price:Number(it.price)||0, qty: it.qty?Number(it.qty):1}));
+          }
+        } catch(e){}
+        const items = [];
+        const list = document.getElementById("cartItems");
+        if (list){
+          list.querySelectorAll(".cart-item").forEach(node=>{
+            const spans=node.querySelectorAll("span");
+            if (spans.length>=2){
+              const name = spans[0].textContent.trim();
+              const price = parseInt((spans[1].textContent||"0").replace(/\D+/g,""))||0;
+              items.push({name, price, qty:1});
+            }
+          });
+        }
+        return items;
+      }
+      const items = safeCart();
+      if (!items.length){ alert("Корзина пуста."); btns.forEach(b=>b.disabled=false); if (submitBtn) submitBtn.textContent="Я оплатил(а) — отправить заказ"; return; }
+
+      // Totals
+      let subtotal = items.reduce((s,it)=>s+it.price*it.qty,0);
+      let discount = 0, total = subtotal;
+      if (typeof getTotals === "function"){
+        const t = getTotals();
+        subtotal = Number(t.subtotal)||subtotal;
+        discount = Number(t.discount)||0;
+        total = Number(t.total)||subtotal - discount;
+      } else {
+        // Try read from QR UI if present
+        const elTotal = document.getElementById("qr-total");
+        if (elTotal) total = parseInt((elTotal.textContent||"0").replace(/\D+/g,""))||total;
+      }
+
+      // Build order text
+      const lines = [];
+      items.forEach(it=>lines.push(`${it.name} × ${it.qty} — ${it.price*it.qty}₽`));
+      lines.push("");
+      lines.push(`Сумма: ${subtotal}₽`);
+      if (discount>0) lines.push(`Скидка: -${discount}₽`);
+      lines.push(`К оплате: ${total}₽`);
+      const oid = (document.getElementById("qr-order-id")?.textContent||"").trim();
+      if (oid) lines.unshift(`Заказ № ${oid}`);
+      // Customer fields
+      const name = document.getElementById("f_name")?.value?.trim()||"";
+      const phone = document.getElementById("f_phone")?.value?.trim()||"";
+      const addr = document.getElementById("f_addr")?.value?.trim()||"";
+      const comment = document.getElementById("f_comment")?.value?.trim()||"";
+      lines.push("");
+      lines.push(`Имя: ${name||"-"}`);
+      lines.push(`Телефон: ${phone||"-"}`);
+      if (addr) lines.push(`Адрес: ${addr}`);
+      if (comment) lines.push(`Комментарий: ${comment}`);
+      const orderText = lines.join("\n");
+
+      // Send to Formspree using fetch to avoid navigation
+      const fd = new FormData(form);
+      fd.set("order_text", orderText);
+      const endpoint = (typeof FORMSPREE_ENDPOINT!=="undefined" && FORMSPREE_ENDPOINT) ? FORMSPREE_ENDPOINT : form.action;
+      const resp = await fetch(endpoint, { method: "POST", body: fd, headers: { "Accept": "application/json" } });
+      if (!resp.ok){
+        throw new Error("Formspree ошибка: " + resp.status);
+      }
+
+      // Download receipt
+      if (typeof downloadReceipt === "function") {
+        downloadReceipt(orderText);
+      } else {
+        const blob = new Blob([orderText], {type:"text/plain;charset=utf-8"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const dt = new Date();
+        const pad=n=>String(n).padStart(2,"0");
+        a.download = `chek_${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}_${pad(dt.getHours())}-${pad(dt.getMinutes())}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+      }
+
+      // Show success message and clear cart
+      const ok = document.getElementById("qr-success");
+      if (ok) ok.style.display = "block";
+      try{
+        if (Array.isArray(window.cart)) { window.cart.length = 0; }
+        localStorage.removeItem("cart");
+      }catch(e){}
+      // update totals in mini-cart if present
+      try{ if (typeof renderCart === "function") renderCart(); if (typeof updateCartCounter === "function") updateCartCounter(); }catch(e){}
+
+    } catch(err){
+      console.error(err);
+      alert("Не удалось отправить заказ. Попробуйте ещё раз.");
+    } finally {
+      // Re-enable buttons
+      const btns = form.querySelectorAll("button");
+      btns.forEach(b=>b.disabled=false);
+      const submitBtn2 = Array.from(btns).find(b => /я оплатил/i.test((b.textContent||"")));
+      if (submitBtn2) submitBtn2.textContent = "Я оплатил(а) — отправить заказ";
+    }
+  }, { once: false });
 })();
+
 </script>
 <!-- === /МОДАЛКА ОПЛАТЫ СБП === -->
 <script>
