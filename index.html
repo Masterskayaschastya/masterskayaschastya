@@ -315,13 +315,7 @@
 <form action="https://formspree.io/f/xpwrrowl" class="modal" id="cartModal" method="POST" style="display: none;"><div class="modal-content"><span class="close" onclick="closeModal('cartModal')">×</span>
 <h3>Корзина</h3>
 <div id="cartItems"></div>
-<div style="display:flex; gap:8px; margin:10px 0;">
-  <input id="promoCodeInput" type="text" placeholder="Промокод" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;">
-  <button type="button" onclick="applyPromo()">Применить</button>
-</div>
-<div id="promoStatus" style="min-height:1.2em;"></div>
-
-<div class="cart-total" id="cartTotal">Сумма: 0 ₽</div>
+<div class="cart-total" id="cartTotal">Итого: 0 ₽</div>
 <div class="cart-total" id="cartDiscount" style="display:none;">Скидка: -0 ₽</div>
 <div class="cart-total" id="cartGrandTotal">К оплате: 0 ₽</div>
 <input id="orderInput" name="order" type="hidden"/>
@@ -395,6 +389,15 @@ function clearCart() {
 function prepareFormData(event) {
   event.preventDefault();
 
+  const name = document.getElementById('customerName').value.trim();
+  const phone = document.getElementById('customerPhone').value.trim();
+  const address = document.getElementById('customerAddress').value.trim();
+
+  if (!name || !phone || !address) {
+    alert('Пожалуйста, заполните все поля.');
+    return;
+  }
+
   if (!Array.isArray(cart) || cart.length === 0) {
     alert('Корзина пуста!');
     return;
@@ -405,23 +408,188 @@ function prepareFormData(event) {
   lines.push('');
   lines.push(`Сумма: ${totals.subtotal}₽`);
   if (appliedPromo) {
-    lines.push(`Промокод: ${appliedPromo} (-20%)`);
+    lines.push(`Промокод: ${appliedPromo} (-10%)`);
     lines.push(`Скидка: -${totals.discount}₽`);
   }
   lines.push(`К оплате: ${totals.total}₽`);
+  lines.push('');
+  lines.push(`ФИО: ${name}`);
+  lines.push(`Телефон: ${phone}`);
+  lines.push(`Адрес доставки: ${address}`);
 
-  const orderDetails = lines.join('
-');
+  const orderDetails = lines.join('\n');
   document.getElementById('orderInput').value = orderDetails;
 
   alert('Ваш заказ отправлен! Спасибо!');
   document.getElementById('cartModal').submit();
+  if (typeof downloadReceipt === 'function') {
+    downloadReceipt(orderDetails);
+  }
 
   cart.length = 0;
   appliedPromo = null;
   renderCart();
   updateCartCounter();
   document.getElementById('cartModal').style.display = 'none';
+}
+
+
+function downloadReceipt(orderText) {
+  const blob = new Blob([orderText], { type: 'text/plain' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'чек_заказа.txt';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+
+function openModal(id) {
+  // Close all modals
+  document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  const el = document.getElementById(id);
+  if (!el) {
+    console.warn('Modal not found:', id);
+    return;
+  }
+  el.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+  // restore scroll if nothing else open
+  var anyOpen = Array.from(document.querySelectorAll('.modal')).some(m => getComputedStyle(m).display === 'block');
+  if (!anyOpen) document.body.style.overflow = '';
+}
+
+window.onclick = function(event) {
+  const modals = document.querySelectorAll('.modal');
+  modals.forEach(modal => {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+}
+</script><script>
+// --- Injected helpers ---
+
+// Paginator for Boxes ("Шкатулки")
+function showBoxPage(id) {
+  const pages = document.querySelectorAll('#boxesModal .product-list[id^="boxesPage"]');
+  pages.forEach(p => p.classList.add('hidden'));
+  const target = document.getElementById(id);
+  if (target) target.classList.remove('hidden');
+}
+
+// Attach submit handler to the cart form (so Enter works)
+(function attachCartSubmit() {
+  const modal = document.getElementById('cartModal');
+  if (!modal) return;
+  const form = modal.querySelector('form');
+  if (form && !form.dataset.bound) {
+    form.addEventListener('submit', function(e){
+      if (typeof prepareFormData === 'function') {
+        e.preventDefault();
+        prepareFormData(e);
+      }
+    });
+    form.dataset.bound = '1';
+  }
+})();
+
+// Implement manualDownload() if a button calls it
+if (typeof window.manualDownload !== 'function') {
+  window.manualDownload = function() {
+    try {
+      const name = (document.getElementById('customerName')?.value || '').trim();
+      const phone = (document.getElementById('customerPhone')?.value || '').trim();
+      const address = (document.getElementById('customerAddress')?.value || '').trim();
+      const cartList = (typeof window.cart !== 'undefined' && Array.isArray(window.cart)) ? window.cart : [];
+
+      if (cartList.length === 0) {
+        alert('Корзина пуста!');
+        return;
+      }
+
+      const orderDetails = cartList.map(item => `${item.name} - ${item.price}₽`).join("\\n")
+        + `\\n\\nФИО: ${name || '-'}\\nТелефон: ${phone || '-'}\\nАдрес доставки: ${address || '-'}`;
+
+      if (typeof downloadReceipt === 'function') {
+        downloadReceipt(orderDetails);
+      } else {
+        const blob = new Blob([orderDetails], {type: 'text/plain;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'order.txt';
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+      }
+    } catch (err) {
+      console.error('manualDownload error', err);
+      alert('Не удалось сформировать чек.');
+    }
+  };
+}
+
+// Close any open modal on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  }
+});
+</script>
+<script>
+if (!window.__modalClickBound) {
+  window.__modalClickBound = true;
+  document.addEventListener('click', function(e){
+    const modal = e.target.closest('.modal');
+    const content = e.target.closest('.modal-content');
+    if (modal && !content) {
+      modal.style.display = 'none';
+      const anyOpen = Array.from(document.querySelectorAll('.modal')).some(m => getComputedStyle(m).display === 'block');
+      if (!anyOpen) document.body.style.overflow = '';
+    }
+  });
+}
+</script>
+<script>
+// === Promo & totals ===
+let PROMO_CODE = localStorage.getItem('PROMO_CODE') || 'Anna10'; // <-- можно поменять в любой момент
+let appliedPromo = null;
+
+function setPromoCode(code) {
+  PROMO_CODE = String(code || '').trim();
+  localStorage.setItem('PROMO_CODE', PROMO_CODE);
+}
+
+function getTotals() {
+  const subtotal = (Array.isArray(cart) ? cart : []).reduce((s, it) => s + (Number(it.price)||0), 0);
+  const discount = appliedPromo ? Math.round(subtotal * 0.10) : 0;
+  const total = Math.max(0, subtotal - discount);
+  return { subtotal, discount, total };
+}
+
+function formatRub(n) {
+  n = Number(n)||0;
+  return n.toLocaleString('ru-RU') + ' ₽';
+}
+
+function updatePromoStatus() {
+  const el = document.getElementById('promoStatus');
+  if (!el) return;
+  if (appliedPromo) {
+    el.textContent = 'Промокод применён: -10%';
+    el.style.color = 'green';
+  } else {
+    el.textContent = '';
+    el.style.color = '';
+  }
 }
 
 function applyPromo() {
@@ -2317,7 +2485,7 @@ document.addEventListener('DOMContentLoaded', function(){
       // Сравниваем с PROMO_CODE, который уже есть в странице (например, 'Anna10')
       if (typeof PROMO_CODE !== 'undefined' && code.toUpperCase() === String(PROMO_CODE).toUpperCase()) {
         if (typeof appliedPromo !== 'undefined') appliedPromo = code;
-        if (status) { status.textContent = 'Промокод применён: -20%'; status.style.color = 'green'; }
+        if (status) { status.textContent = 'Промокод применён: -10%'; status.style.color = 'green'; }
       } else {
         if (typeof appliedPromo !== 'undefined') appliedPromo = null;
         if (status) { status.textContent = 'Неверный промокод'; status.style.color = 'red'; }
