@@ -1576,6 +1576,10 @@ document.addEventListener('DOMContentLoaded', function(){
           <div>Номер заказа: <b id="qr-order-id"></b></div>
           <ul id="qr-list" class="qr-items"></ul>
           <div class="qr-total">К оплате: <span id="qr-total"></span> ₽</div>
+<div class="qr-comment" style="margin-top:6px;font-size:14px;">
+  <b>Комментарий к переводу:</b> Заказ №<span id="qr-order-plain"></span>
+</div>
+
           <p class="qr-note">
             1) Отсканируйте QR в приложении банка и введите указанную сумму.<br/>
             2) В комментарии к переводу укажите: <b>Заказ <span id="qr-order-id-2"></span></b>.<br/>
@@ -1732,7 +1736,10 @@ const cart = normalizeCart(raw);
   document.getElementById("qr-image").src = QR_IMAGE_SRC;
   document.getElementById("qr-order-id").textContent = orderId;
   document.getElementById("qr-order-id-2").textContent = orderId;
-  document.getElementById("qr-total").textContent = total.toFixed(0);
+  
+  var elPlain = document.getElementById("qr-order-plain");
+  if (elPlain) elPlain.textContent = orderId;
+document.getElementById("qr-total").textContent = total.toFixed(0);
   renderList(cart);
 
   document.getElementById("f_order_id").value = orderId;
