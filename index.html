@@ -665,5 +665,25 @@ function applyPromo() {
     </div>
   </div>
 </div>
+<script>
+// Safer modal open delegation for catalog items
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.catalog-item[onclick]').forEach(function(el){
+    const match = (el.getAttribute('onclick') || '').match(/openModal\('([^']+)'\)/);
+    if (!match) return;
+    const id = match[1];
+    el.addEventListener('click', function(evt){
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (typeof openModal === 'function') {
+        openModal(id);
+      } else {
+        const elModal = document.getElementById(id);
+        if (elModal) elModal.style.display = 'block';
+      }
+    }, { capture: false });
+  });
+});
+</script>
 </body>
 </html>
