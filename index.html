@@ -1819,5 +1819,90 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 
+
+<script>
+(function(){
+  function cartLoadSafe(){
+    try {
+      const ls = localStorage.getItem("cart");
+      if (ls) return JSON.parse(ls);
+    } catch(e){}
+    try {
+      if (typeof cart !== "undefined" && Array.isArray(cart)) return cart;
+    } catch(e){}
+    if (Array.isArray(window.cart)) return window.cart;
+    try {
+      const cont = document.getElementById('cartItems');
+      if (cont) {
+        const items = [];
+        cont.querySelectorAll('.cart-item').forEach(node => {
+          const spans = node.querySelectorAll('span');
+          if (spans.length >= 2) {
+            const name = (spans[0].textContent||'').trim();
+            const priceText = (spans[1].textContent||'').trim().replace(/\s|₽/g,'');
+            const price = Number(priceText) || 0;
+            if (name || price) items.push({ name: name || 'Товар', price });
+          }
+        });
+        if (items.length) return items;
+      }
+    } catch(e){}
+    return [];
+  }
+  function norm(cart){
+    const map = new Map();
+    for (const it of cart) {
+      const name = it.name || it.title || 'Товар';
+      const price = Number(it.price)||0;
+      const qty = Number(it.qty||1);
+      const key = name + "|" + price;
+      if (!map.has(key)) map.set(key, {name, price, qty});
+      else map.get(key).qty += qty;
+    }
+    return Array.from(map.values());
+  }
+  function total(cart){ return cart.reduce((s,i)=>s+i.price*i.qty,0); }
+  function list(cart){
+    const ul = document.getElementById("qr-list");
+    if (!ul) return;
+    ul.innerHTML='';
+    cart.forEach(it=>{
+      const li=document.createElement('li');
+      li.innerHTML = `<span>${it.name} × ${it.qty}</span><b>${it.price*it.qty} ₽</b>`;
+      ul.appendChild(li);
+    });
+  }
+  function makeId(){
+    const d=new Date(), pad=n=>String(n).padStart(2,'0');
+    const ymdhms=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    const rnd=Math.floor(Math.random()*900+100);
+    return `MS-${ymdhms}-${rnd}`;
+  }
+  function openQRCheckoutOverride(){
+    const raw = cartLoadSafe();
+    if (!raw.length) { alert("Корзина пуста. Добавьте товары перед оплатой."); return; }
+    const c = norm(raw);
+    const sum = total(c);
+    const id = makeId();
+    const img = document.getElementById("qr-image");
+    if (img) img.src = typeof QR_IMAGE_SRC !== 'undefined' ? QR_IMAGE_SRC : "assets/qr-sbp.png";
+    const el1 = document.getElementById("qr-order-id"); if (el1) el1.textContent = id;
+    const el2 = document.getElementById("qr-order-id-2"); if (el2) el2.textContent = id;
+    const el3 = document.getElementById("qr-order-plain"); if (el3) el3.textContent = id;
+    const elTotal = document.getElementById("qr-total"); if (elTotal) elTotal.textContent = sum.toFixed(0);
+    list(c);
+    const f1 = document.getElementById("f_order_id"); if (f1) f1.value = id;
+    const f2 = document.getElementById("f_total_amount"); if (f2) f2.value = sum.toFixed(0);
+    const f3 = document.getElementById("f_items"); if (f3) f3.value = c.map(it=>`${it.name} × ${it.qty} — ${it.price*it.qty} ₽`).join("; ");
+    const form = document.getElementById("qr-form"); if (form && typeof FORMSPREE_ENDPOINT!=='undefined') form.action = FORMSPREE_ENDPOINT;
+    const overlay = document.getElementById("qr-overlay");
+    if (!overlay) { alert("Компонент окна оплаты не найден на странице."); return; }
+    overlay.style.display='block';
+  }
+  // expose/override
+  window.openQRCheckout = openQRCheckoutOverride;
+})();
+</script>
+
 </body>
 </html>
