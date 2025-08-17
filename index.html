@@ -1299,11 +1299,26 @@ function downloadReceipt(orderText) {
 
 
 function openModal(id) {
-  document.getElementById(id).style.display = 'block';
+  // Hide others
+  document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  let nodes = document.querySelectorAll('[id="' + id + '"]');
+  let el = null;
+  if (nodes.length > 0) {
+    el = Array.from(nodes).find(n => !/Товары\s+скоро\s+будут\s+добавлены/i.test(n.textContent)) || nodes[0];
+  } else {
+    el = document.getElementById(id);
+  }
+  if (el) {
+    el.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function closeModal(id) {
-  document.getElementById(id).style.display = 'none';
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+  const anyOpen = Array.from(document.querySelectorAll('.modal')).some(m => getComputedStyle(m).display === 'block');
+  if (!anyOpen) document.body.style.overflow = '';
 }
 
 window.onclick = function(event) {
@@ -1384,6 +1399,20 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
   }
 });
+</script>
+<script>
+if (!window.__modalClickBound) {
+  window.__modalClickBound = true;
+  document.addEventListener('click', function(e){
+    const modal = e.target.closest('.modal');
+    const content = e.target.closest('.modal-content');
+    if (modal && !content) {
+      modal.style.display = 'none';
+      const anyOpen = Array.from(document.querySelectorAll('.modal')).some(m => getComputedStyle(m).display === 'block');
+      if (!anyOpen) document.body.style.overflow = '';
+    }
+  });
+}
 </script>
 </body>
 </html>
