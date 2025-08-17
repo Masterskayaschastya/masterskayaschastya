@@ -327,32 +327,9 @@
 <input id="orderInput" name="order" type="hidden"/>
 <button id="qr-pay-btn" style="margin-top:8px;background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;width:100%;" type="button">Оплатить по QR (СБП)</button>
 <button style="display:none;" type="button">Оформить заказ</button>
+<button onclick="manualDownload()" type="button">Скачать чек</button>
 </div></form><script>
 let cart = [];
-
-// === Cart & promo globals (safe inject) ===
-if (typeof window.cart === 'undefined') { window.cart = []; }
-var appliedPromo = (typeof window.appliedPromo!=='undefined') ? window.appliedPromo : null;
-const PROMO_CODE = "Anna20";
-const DISCOUNT_RATE = 0.20;
-// Currency format helper
-if (typeof window.formatRub !== 'function') {
-  window.formatRub = function(n){ try { return Number(n||0).toLocaleString('ru-RU'); } catch(e){ return String(n||0); } };
-}
-// Totals helper
-if (typeof window.getTotals !== 'function') {
-  window.getTotals = function(){
-    try {
-      var subtotal = 0;
-      (Array.isArray(cart)?cart:[]).forEach(it=>{ subtotal += Number(it.price)||0; });
-      var discount = (typeof appliedPromo!=='undefined' && appliedPromo) ? subtotal * DISCOUNT_RATE : 0;
-      var total = subtotal - discount;
-      return { subtotal: Math.round(subtotal), discount: Math.round(discount), total: Math.max(0, Math.round(total)) };
-    } catch(e){ return {subtotal:0, discount:0, total:0}; }
-  };
-}
-// === /Cart & promo globals ===
-
 
 function updateCartCounter() {
   const counter = cart.length;
@@ -458,76 +435,6 @@ function applyPromo() {
   renderCart();
   updatePromoStatus();
 }
-
-// === Авто-скачивание чека при оплате ===
-function buildReceiptText() {
-  try {
-    const t = (typeof getTotals === 'function') ? getTotals() : {subtotal:0, discount:0, total:0};
-    const items = (Array.isArray(cart) ? cart : []).map((it, idx) => `${idx+1}. ${it.name} — ${it.price}₽`);
-    const now = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const orderId = (typeof makeId === 'function') ? makeId() : `MS-${now.getTime()}`;
-    let lines = [];
-    lines.push(`Заказ: ${orderId}`);
-    lines.push(`Дата/время: ${stamp}`);
-    lines.push('');
-    if (items.length) {
-      lines.push('Товары:');
-      lines = lines.concat(items);
-    } else {
-      lines.push('Товары: (пусто)');
-    }
-    lines.push('');
-    lines.push(`Сумма: ${t.subtotal}₽`);
-    if (typeof appliedPromo !== 'undefined' && appliedPromo) {
-      lines.push(`Промокод: ${appliedPromo} (-20%)`);
-      lines.push(`Скидка: -${t.discount}₽`);
-    }
-    lines.push(`К оплате: ${t.total}₽`);
-    return { text: lines.join('
-'), orderId };
-  } catch(e) {
-    return { text: 'Ошибка формирования чека', orderId: `MS-${Date.now()}` };
-  }
-}
-
-function downloadReceiptAuto() {
-  const { text, orderId } = buildReceiptText();
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `receipt-${orderId}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 0);
-}
-
-// Привязываем к кнопке оплаты
-document.addEventListener('DOMContentLoaded', function(){
-  var payBtn = document.getElementById('qr-pay-btn');
-  if (payBtn && !payBtn._receiptBound) {
-    payBtn.addEventListener('click', function(){
-      // скачиваем чек
-      try { downloadReceiptAuto(); } catch(e){ console.warn('downloadReceiptAuto error', e); }
-      // открываем окно оплаты по QR, если определено
-      if (typeof openQRCheckout === 'function') {
-        openQRCheckout();
-      } else {
-        // запасной вариант: просто показать картину, если функции нет
-        var overlay = document.getElementById('qr-overlay');
-        if (overlay) overlay.style.display = 'block';
-      }
-    });
-    payBtn._receiptBound = true;
-  }
-});
-// === /Авто-скачивание чека при оплате ===
-
 </script>
 <div class="modal" id="bagsModal">
 <div class="modal-content">
@@ -1980,76 +1887,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }, { capture: false });
   });
 });
-
-// === Авто-скачивание чека при оплате ===
-function buildReceiptText() {
-  try {
-    const t = (typeof getTotals === 'function') ? getTotals() : {subtotal:0, discount:0, total:0};
-    const items = (Array.isArray(cart) ? cart : []).map((it, idx) => `${idx+1}. ${it.name} — ${it.price}₽`);
-    const now = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const orderId = (typeof makeId === 'function') ? makeId() : `MS-${now.getTime()}`;
-    let lines = [];
-    lines.push(`Заказ: ${orderId}`);
-    lines.push(`Дата/время: ${stamp}`);
-    lines.push('');
-    if (items.length) {
-      lines.push('Товары:');
-      lines = lines.concat(items);
-    } else {
-      lines.push('Товары: (пусто)');
-    }
-    lines.push('');
-    lines.push(`Сумма: ${t.subtotal}₽`);
-    if (typeof appliedPromo !== 'undefined' && appliedPromo) {
-      lines.push(`Промокод: ${appliedPromo} (-20%)`);
-      lines.push(`Скидка: -${t.discount}₽`);
-    }
-    lines.push(`К оплате: ${t.total}₽`);
-    return { text: lines.join('
-'), orderId };
-  } catch(e) {
-    return { text: 'Ошибка формирования чека', orderId: `MS-${Date.now()}` };
-  }
-}
-
-function downloadReceiptAuto() {
-  const { text, orderId } = buildReceiptText();
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `receipt-${orderId}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 0);
-}
-
-// Привязываем к кнопке оплаты
-document.addEventListener('DOMContentLoaded', function(){
-  var payBtn = document.getElementById('qr-pay-btn');
-  if (payBtn && !payBtn._receiptBound) {
-    payBtn.addEventListener('click', function(){
-      // скачиваем чек
-      try { downloadReceiptAuto(); } catch(e){ console.warn('downloadReceiptAuto error', e); }
-      // открываем окно оплаты по QR, если определено
-      if (typeof openQRCheckout === 'function') {
-        openQRCheckout();
-      } else {
-        // запасной вариант: просто показать картину, если функции нет
-        var overlay = document.getElementById('qr-overlay');
-        if (overlay) overlay.style.display = 'block';
-      }
-    });
-    payBtn._receiptBound = true;
-  }
-});
-// === /Авто-скачивание чека при оплате ===
-
 </script>
 <footer class="site-footer">
 <div class="footer-content">
