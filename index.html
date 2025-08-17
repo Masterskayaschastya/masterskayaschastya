@@ -329,18 +329,29 @@
 <button style="display:none;" type="button">Оформить заказ</button>
 </div></form><script>
 let cart = [];
-function getTotals(){
-  let subtotal=0;
-  (Array.isArray(cart)?cart:[]).forEach(it=>{ subtotal += Number(it.price)||0; });
-  let discount = 0;
-  if (typeof appliedPromo!=='undefined' && appliedPromo){
-    discount = Math.round(subtotal * 0.20);
-  }
-  let total = Math.max(0, subtotal - discount);
-  return {subtotal, discount, total};
-}
 
-function formatRub(n){ n=Number(n)||0; return n.toLocaleString('ru-RU'); }
+// === Cart & promo globals (safe inject) ===
+if (typeof window.cart === 'undefined') { window.cart = []; }
+var appliedPromo = (typeof window.appliedPromo!=='undefined') ? window.appliedPromo : null;
+const PROMO_CODE = "Anna20";
+const DISCOUNT_RATE = 0.20;
+// Currency format helper
+if (typeof window.formatRub !== 'function') {
+  window.formatRub = function(n){ try { return Number(n||0).toLocaleString('ru-RU'); } catch(e){ return String(n||0); } };
+}
+// Totals helper
+if (typeof window.getTotals !== 'function') {
+  window.getTotals = function(){
+    try {
+      var subtotal = 0;
+      (Array.isArray(cart)?cart:[]).forEach(it=>{ subtotal += Number(it.price)||0; });
+      var discount = (typeof appliedPromo!=='undefined' && appliedPromo) ? subtotal * DISCOUNT_RATE : 0;
+      var total = subtotal - discount;
+      return { subtotal: Math.round(subtotal), discount: Math.round(discount), total: Math.max(0, Math.round(total)) };
+    } catch(e){ return {subtotal:0, discount:0, total:0}; }
+  };
+}
+// === /Cart & promo globals ===
 
 
 function updateCartCounter() {
@@ -474,7 +485,8 @@ function buildReceiptText() {
       lines.push(`Скидка: -${t.discount}₽`);
     }
     lines.push(`К оплате: ${t.total}₽`);
-    return { text: lines.join('\\n'), orderId };
+    return { text: lines.join('
+'), orderId };
   } catch(e) {
     return { text: 'Ошибка формирования чека', orderId: `MS-${Date.now()}` };
   }
@@ -1995,7 +2007,8 @@ function buildReceiptText() {
       lines.push(`Скидка: -${t.discount}₽`);
     }
     lines.push(`К оплате: ${t.total}₽`);
-    return { text: lines.join('\\n'), orderId };
+    return { text: lines.join('
+'), orderId };
   } catch(e) {
     return { text: 'Ошибка формирования чека', orderId: `MS-${Date.now()}` };
   }
