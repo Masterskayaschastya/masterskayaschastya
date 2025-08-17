@@ -330,8 +330,8 @@
 <input id="customerName" name="name" placeholder="Ваше ФИО" required="" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;" type="text"/>
 <input id="customerPhone" name="phone" placeholder="Телефон" required="" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;" type="tel"/>
 
-<button type="button" style="margin-top:8px;background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;width:100%;" onclick="openQRCheckout()">Оплатить по QR (СБП)</button>
-<button type="submit">Оформить заказ</button>
+<button id="qr-pay-btn" type="button" style="margin-top:8px;background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;width:100%;">Оплатить по QR (СБП)</button>
+<button type="button" style="display:none;">Оформить заказ</button>
 <button onclick="manualDownload()" type="button">Скачать чек</button>
 </div></form><script>
 let cart = [];
@@ -1764,6 +1764,29 @@ document.getElementById("qr-total").textContent = total.toFixed(0);
 })();
 </script>
 <!-- === /МОДАЛКА ОПЛАТЫ СБП === -->
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var qrBtn = document.getElementById('qr-pay-btn');
+  if (qrBtn) {
+    qrBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      try { openQRCheckout(); } catch(err) { console.error(err); alert('Не удалось открыть окно оплаты.'); }
+    });
+  }
+  var cartForm = document.getElementById('cartModal');
+  if (cartForm) {
+    cartForm.addEventListener('submit', function(e){
+      // Блокируем прямую отправку формы — оформляем только через QR
+      e.preventDefault();
+      // и открываем модалку оплаты, если не пусто
+      try { openQRCheckout(); } catch(err) {}
+      return false;
+    });
+  }
+});
+</script>
 
 </body>
 </html>
