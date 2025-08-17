@@ -329,6 +329,19 @@
 <button style="display:none;" type="button">Оформить заказ</button>
 </div></form><script>
 let cart = [];
+function getTotals(){
+  let subtotal=0;
+  (Array.isArray(cart)?cart:[]).forEach(it=>{ subtotal += Number(it.price)||0; });
+  let discount = 0;
+  if (typeof appliedPromo!=='undefined' && appliedPromo){
+    discount = Math.round(subtotal * 0.20);
+  }
+  let total = Math.max(0, subtotal - discount);
+  return {subtotal, discount, total};
+}
+
+function formatRub(n){ n=Number(n)||0; return n.toLocaleString('ru-RU'); }
+
 
 function updateCartCounter() {
   const counter = cart.length;
