@@ -329,6 +329,8 @@
 <input id="customerAddress" name="address" placeholder="Адрес доставки" required="" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;" type="text"/>
 <input id="customerName" name="name" placeholder="Ваше ФИО" required="" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;" type="text"/>
 <input id="customerPhone" name="phone" placeholder="Телефон" required="" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;" type="tel"/>
+
+<button type="button" style="margin-top:8px;background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;width:100%;" onclick="openQRCheckout()">Оплатить по QR (СБП)</button>
 <button type="submit">Оформить заказ</button>
 <button onclick="manualDownload()" type="button">Скачать чек</button>
 </div></form><script>
@@ -1535,6 +1537,190 @@ document.addEventListener('DOMContentLoaded', function(){
     </p>
   </div>
 </footer>
+
+
+<!-- === МОДАЛКА ОПЛАТЫ СБП (СТАТИЧЕСКИЙ QR) + ОТПРАВКА В FORMSPREE === -->
+<style>
+  .qr-overlay{display:none;position:fixed;inset:0;background:#0008;z-index:9999}
+  .qr-wrap{max-width:560px;margin:5% auto;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:20px}
+  .qr-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .qr-close{background:none;border:0;font-size:24px;line-height:1;cursor:pointer}
+  .qr-cols{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:720px){.qr-cols{grid-template-columns:1.2fr .8fr}}
+  .qr-box{border:1px solid #eee;border-radius:12px;padding:12px}
+  .qr-items{max-height:150px;overflow:auto;margin:6px 0 0;padding:0;list-style:none}
+  .qr-items li{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #eee}
+  .qr-items li:last-child{border-bottom:0}
+  .qr-total{font-size:18px;font-weight:700;margin-top:8px}
+  .qr-note{font-size:12px;color:#666}
+  .qr-form .row{display:flex;gap:8px}
+  .qr-form input,.qr-form textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px}
+  .qr-btn{width:100%;padding:12px 16px;border:0;border-radius:10px;cursor:pointer;font-weight:700}
+  .qr-btn-primary{background:#1a73e8;color:#fff}
+  .qr-btn-secondary{background:#f3f4f6}
+  .qr-success{display:none;text-align:center}
+</style>
+
+<div id="qr-overlay" class="qr-overlay" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+  <div class="qr-wrap">
+    <div class="qr-head">
+      <h3 id="qr-title" style="margin:0">Оплата через СБП</h3>
+      <button class="qr-close" aria-label="Закрыть" onclick="qrModal(false)">×</button>
+    </div>
+
+    <div class="qr-cols">
+      <!-- Левая колонка: QR и итог -->
+      <div class="qr-box">
+        <img id="qr-image" src="" alt="QR СБП для оплаты" style="width:100%;height:auto;border-radius:10px"/>
+        <div style="margin-top:10px">
+          <div>Номер заказа: <b id="qr-order-id"></b></div>
+          <ul id="qr-list" class="qr-items"></ul>
+          <div class="qr-total">К оплате: <span id="qr-total"></span> ₽</div>
+          <p class="qr-note">
+            1) Отсканируйте QR в приложении банка и введите указанную сумму.<br/>
+            2) В комментарии к переводу укажите: <b>Заказ <span id="qr-order-id-2"></span></b>.<br/>
+            3) Нажмите кнопку ниже, чтобы отправить данные заказа продавцу.
+          </p>
+        </div>
+      </div>
+
+      <!-- Правая колонка: данные покупателя + отправка в Formspree -->
+      <div class="qr-box">
+        <form id="qr-form" class="qr-form" action="https://formspree.io/f/xpwrrowl" method="POST">
+          <input type="hidden" name="order_id" id="f_order_id"/>
+          <input type="hidden" name="total_amount" id="f_total_amount"/>
+          <input type="hidden" name="items" id="f_items"/>
+          <input type="hidden" name="payment_method" value="СБП (статический QR)"/>
+
+          <label>Ваше имя
+            <input name="customer_name" id="f_name" placeholder="Иван Иванов" required/>
+          </label>
+          <label>Телефон
+            <input name="phone" id="f_phone" placeholder="+7 999 123-45-67" required/>
+          </label>
+          <label>Адрес доставки (если нужен)
+            <textarea name="address" id="f_addr" rows="2" placeholder="Город, улица, дом, подъезд"></textarea>
+          </label>
+          <label>Комментарий к заказу
+            <textarea name="comment" id="f_comment" rows="2" placeholder="Размер/цвет/пожелания"></textarea>
+          </label>
+
+          <div class="row">
+            <button type="button" class="qr-btn qr-btn-secondary" onclick="qrModal(false)">Закрыть</button>
+            <button type="submit" class="qr-btn qr-btn-primary">Я оплатил(а) — отправить заказ</button>
+          </div>
+
+          <div id="qr-success" class="qr-success">
+            <p>Спасибо! Заказ отправлен. Мы свяжемся с вами в ближайшее время.</p>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* === НАСТРОЙКИ === */
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/xpwrrowl"; // замените при необходимости
+const QR_IMAGE_SRC = "assets/qr-sbp.png"; // ваш статический QR по СБП (PNG/JPG/SVG)
+const ORDER_PREFIX = "MS"; // префикс номера заказа
+
+/* === СОВМЕСТИМОСТЬ С ВАШЕЙ КОРЗИНОЙ === */
+function loadCart() {
+  try {
+    const ls = localStorage.getItem("cart");
+    if (ls) return JSON.parse(ls);
+  } catch(e){}
+  if (Array.isArray(window.cart)) return window.cart;
+  return [];
+}
+
+function normalizeCart(raw){
+  const map = new Map();
+  for (const it of raw) {
+    const name = it.name || it.title || "Товар";
+    const price = Number(it.price)||0;
+    const qty = Number(it.qty||1);
+    const key = name + "|" + price;
+    if (!map.has(key)) map.set(key, {name, price, qty});
+    else map.get(key).qty += qty;
+  }
+  return Array.from(map.values());
+}
+
+function calcTotal(cart) {
+  return cart.reduce((sum, it) => sum + (it.price * it.qty), 0);
+}
+
+function serializeItems(cart) {
+  return cart.map(it => `${it.name} × ${it.qty} — ${it.price*it.qty} ₽`).join("; ");
+}
+
+function renderList(cart){
+  const ul = document.getElementById("qr-list");
+  if (!ul) return;
+  ul.innerHTML = "";
+  cart.forEach(it => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span>${it.name} × ${it.qty}</span><b>${(it.price*it.qty)} ₽</b>`;
+    ul.appendChild(li);
+  });
+}
+
+/* === НОМЕР ЗАКАЗА === */
+function makeOrderId() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  const ymdhms = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const rnd = Math.floor(Math.random()*900 + 100);
+  return `${ORDER_PREFIX}-${ymdhms}-${rnd}`;
+}
+
+/* === МОДАЛКА === */
+function qrModal(show){
+  const el = document.getElementById("qr-overlay");
+  if (el) el.style.display = show ? "block" : "none";
+}
+
+/* === ПУБЛИЧНАЯ ФУНКЦИЯ: вызвать при клике "Оплатить по QR (СБП)" === */
+async function openQRCheckout() {
+  const raw = loadCart();
+  if (!raw.length) {
+    alert("Корзина пуста. Добавьте товары перед оплатой.");
+    return;
+  }
+  const cart = normalizeCart(raw);
+  const total = calcTotal(cart);
+  const orderId = makeOrderId();
+
+  document.getElementById("qr-image").src = QR_IMAGE_SRC;
+  document.getElementById("qr-order-id").textContent = orderId;
+  document.getElementById("qr-order-id-2").textContent = orderId;
+  document.getElementById("qr-total").textContent = total.toFixed(0);
+  renderList(cart);
+
+  document.getElementById("f_order_id").value = orderId;
+  document.getElementById("f_total_amount").value = total.toFixed(0);
+  document.getElementById("f_items").value = serializeItems(cart);
+
+  const form = document.getElementById("qr-form");
+  form.action = FORMSPREE_ENDPOINT;
+
+  qrModal(true);
+}
+
+/* === Обработчик отправки формы === */
+(function attachQRFormHandler(){
+  const form = document.getElementById("qr-form");
+  if (!form) return;
+  form.addEventListener("submit", function(ev){
+    const btns = form.querySelectorAll("button");
+    btns.forEach(b=>b.disabled=true);
+    if (btns[1]) btns[1].textContent = "Отправляем...";
+  });
+})();
+</script>
+<!-- === /МОДАЛКА ОПЛАТЫ СБП === -->
 
 </body>
 </html>
