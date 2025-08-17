@@ -417,7 +417,8 @@ function prepareFormData(event) {
   lines.push(`Телефон: ${phone}`);
   lines.push(`Адрес доставки: ${address}`);
 
-  const orderDetails = lines.join('\n');
+  const orderDetails = lines.join('
+');
   document.getElementById('orderInput').value = orderDetails;
 
   alert('Ваш заказ отправлен! Спасибо!');
@@ -560,7 +561,8 @@ if (!window.__modalClickBound) {
 </script>
 <script>
 // === Promo & totals ===
-let PROMO_CODE = localStorage.getItem('PROMO_CODE') || 'Anna10'; // <-- можно поменять в любой момент
+const PROMO_CODE = "Anna20"; try { localStorage.setItem("PROMO_CODE","Anna20"); } catch(e) {} try { localStorage.setItem("PROMO_CODE","Anna20"); } catch(e) {} // <-- можно поменять в любой момент
+const DISCOUNT_RATE = 0.20;
 let appliedPromo = null;
 
 function setPromoCode(code) {
@@ -570,7 +572,7 @@ function setPromoCode(code) {
 
 function getTotals() {
   const subtotal = (Array.isArray(cart) ? cart : []).reduce((s, it) => s + (Number(it.price)||0), 0);
-  const discount = appliedPromo ? Math.round(subtotal * 0.20) : 0;
+  const discount = appliedPromo ? Math.round(subtotal * DISCOUNT_RATE) : 0;
   const total = Math.max(0, subtotal - discount);
   return { subtotal, discount, total };
 }
