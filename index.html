@@ -1721,7 +1721,11 @@ async function openQRCheckout() {
     alert("Корзина пуста. Добавьте товары перед оплатой.");
     return;
   }
-  const cart = normalizeCart(raw);
+  
+// Экспорт функций в глобальную область для inline-обработчиков
+try { window.openQRCheckout = openQRCheckout; } catch(e){}
+try { window.qrModal = qrModal; } catch(e){}
+const cart = normalizeCart(raw);
   const total = calcTotal(cart);
   const orderId = makeOrderId();
 
