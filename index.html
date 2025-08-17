@@ -317,19 +317,10 @@
 <h3>Корзина</h3>
 <div id="cartItems"></div>
 <div class="cart-total" id="cartTotal">Итого: 0 ₽</div>
-<div class="promo-row" style="margin:10px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-  <input id="promoCodeInput" type="text" placeholder="Промокод" style="padding:8px 10px; border:1px solid #ccc; border-radius:5px; min-width:200px;">
-  <button type="button" onclick="applyPromo()" style="padding:8px 12px; border-radius:6px; border:1px solid #b38cd9; background:#e9dbf7; cursor:pointer;">Применить</button>
-  <span id="promoStatus" class="promo-status" style="min-height:1em;"></span>
-</div>
 <div class="cart-total" id="cartDiscount" style="display:none;">Скидка: -0 ₽</div>
 <div class="cart-total" id="cartGrandTotal">К оплате: 0 ₽</div>
 
 <input id="orderInput" name="order" type="hidden"/>
-<input id="customerAddress" name="address" placeholder="Адрес доставки" required="" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;" type="text"/>
-<input id="customerName" name="name" placeholder="Ваше ФИО" required="" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;" type="text"/>
-<input id="customerPhone" name="phone" placeholder="Телефон" required="" style="width: 100%; padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;" type="tel"/>
-
 <button id="qr-pay-btn" type="button" style="margin-top:8px;background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;width:100%;">Оплатить по QR (СБП)</button>
 <button type="button" style="display:none;">Оформить заказ</button>
 <button onclick="manualDownload()" type="button">Скачать чек</button>
@@ -1576,6 +1567,7 @@ document.addEventListener('DOMContentLoaded', function(){
           <div>Номер заказа: <b id="qr-order-id"></b></div>
           <ul id="qr-list" class="qr-items"></ul>
           <div class="qr-total">К оплате: <span id="qr-total"></span> ₽</div>
+<div id="qr-discount-line" class="qr-note" style="display:none;">Скидка по промокоду: <span id="qr-discount"></span></div>
 <div class="qr-comment" style="margin-top:6px;font-size:14px;">
   <b>Комментарий к переводу:</b> Заказ №<span id="qr-order-plain"></span>
 </div>
@@ -1609,7 +1601,27 @@ document.addEventListener('DOMContentLoaded', function(){
             <textarea name="comment" id="f_comment" rows="2" placeholder="Размер/цвет/пожелания"></textarea>
           </label>
 
-          <div class="row">
+          
+<div class="qr-promo qr-box-lite" style="margin-bottom:10px;">
+  <label for="qrPromoInput" style="display:block;font-weight:600;margin-bottom:6px;">Промокод</label>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <input id="qrPromoInput" type="text" placeholder="Введите промокод" style="flex:1;min-width:180px;padding:10px;border:1px solid #ddd;border-radius:10px"/>
+    <button id="qrPromoBtn" type="button" class="qr-btn qr-btn-secondary" style="width:auto;">Применить</button>
+  </div>
+  <div id="qrPromoStatus" class="qr-note" style="margin-top:6px;min-height:1em;"></div>
+</div>
+
+<!-- Данные покупателя (будут отправлены в письмо) -->
+<label>Ваше ФИО
+  <input name="customer_name" id="f_name" placeholder="Иван Иванов" required/>
+</label>
+<label>Телефон
+  <input name="phone" id="f_phone" placeholder="+7 999 123-45-67" required/>
+</label>
+<label>Адрес доставки
+  <textarea name="address" id="f_addr" rows="2" placeholder="Город, улица, дом, подъезд" required></textarea>
+</label>
+<div class="row">
             <button type="button" class="qr-btn qr-btn-secondary" onclick="qrModal(false)">Закрыть</button>
             <button type="submit" class="qr-btn qr-btn-primary">Я оплатил(а) — отправить заказ</button>
           </div>
@@ -1901,6 +1913,80 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   // expose/override
   window.openQRCheckout = openQRCheckoutOverride;
+})();
+</script>
+
+
+<script>
+(function(){
+  function updateQrTotals(){
+    try {
+      // Если на странице есть глобальные getTotals/appliedPromo/cart — используем их,
+      // чтобы логика скидок совпадала с корзиной
+      if (typeof getTotals === 'function') {
+        const t = getTotals();
+        const total = t.total || 0;
+        const discount = t.discount || 0;
+        var totalEl = document.getElementById('qr-total');
+        if (totalEl) totalEl.textContent = (Number(total)||0).toFixed(0);
+        var fTotal = document.getElementById('f_total_amount');
+        if (fTotal) fTotal.value = (Number(total)||0).toFixed(0);
+        var discLine = document.getElementById('qr-discount-line');
+        var discEl = document.getElementById('qr-discount');
+        if (discLine && discEl) {
+          if (discount > 0) {
+            discLine.style.display = '';
+            discEl.textContent = discount + ' ₽';
+          } else {
+            discLine.style.display = 'none';
+            discEl.textContent = '';
+          }
+        }
+      }
+    } catch(e){ console.warn('updateQrTotals:', e); }
+  }
+
+  function applyQrPromo(){
+    try {
+      var input = document.getElementById('qrPromoInput');
+      var code = (input && input.value || '').trim();
+      var status = document.getElementById('qrPromoStatus');
+      if (!code) {
+        if (typeof appliedPromo !== 'undefined') appliedPromo = null;
+        if (status) { status.textContent = 'Промокод очищен.'; status.style.color = ''; }
+        updateQrTotals();
+        return;
+      }
+      // Сравниваем с PROMO_CODE, который уже есть в странице (например, 'Anna10')
+      if (typeof PROMO_CODE !== 'undefined' && code.toUpperCase() === String(PROMO_CODE).toUpperCase()) {
+        if (typeof appliedPromo !== 'undefined') appliedPromo = code;
+        if (status) { status.textContent = 'Промокод применён: -10%'; status.style.color = 'green'; }
+      } else {
+        if (typeof appliedPromo !== 'undefined') appliedPromo = null;
+        if (status) { status.textContent = 'Неверный промокод'; status.style.color = 'red'; }
+      }
+      updateQrTotals();
+    } catch(e){ console.warn('applyQrPromo:', e); }
+  }
+
+  // Привязки при загрузке
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('qrPromoBtn');
+    if (btn) btn.addEventListener('click', applyQrPromo);
+    var inp = document.getElementById('qrPromoInput');
+    if (inp) inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); applyQrPromo(); } });
+    // Клик по тёмному фону — закрыть
+    var overlay = document.getElementById('qr-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(e){
+        if (e.target === overlay) { overlay.style.display = 'none'; }
+      });
+    }
+  });
+
+  // Экспортируем на всякий случай
+  window.applyQrPromo = applyQrPromo;
+  window.updateQrTotals = updateQrTotals;
 })();
 </script>
 
