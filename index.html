@@ -485,6 +485,7 @@ nav a{ font-family:'Montserrat', sans-serif; letter-spacing:.2px; }
 <div class="cart-total" id="cartDiscount" style="display:none;">Скидка: -0 ₽</div>
 <div class="cart-total" id="cartGrandTotal">К оплате: 0 ₽</div>
 <input id="orderInput" name="order" type="hidden"/>
+<button id="clear-cart-btn" onclick="clearCart()" style="margin-top:8px;background:#e5e7eb;color:#111;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;width:100%;" type="button">Очистить корзину</button>
 <button id="qr-pay-btn" onclick="openQrModalSafely(); return false;" style="margin-top:8px;background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;width:100%;" type="button">Оплатить по QR (СБП)</button>
 <button style="display:none;" type="button">Оформить заказ</button>
 </div></form>
@@ -589,6 +590,19 @@ function renderCart() {
       qrBtn.style.cursor = 'pointer';
     }
   }
+  const clearBtn = document.getElementById('clear-cart-btn');
+  if (clearBtn) {
+    if ((Array.isArray(cart) ? cart.length : 0) === 0) {
+      clearBtn.disabled = true;
+      clearBtn.style.opacity = '0.6';
+      clearBtn.style.cursor = 'not-allowed';
+    } else {
+      clearBtn.disabled = false;
+      clearBtn.style.opacity = '1';
+      clearBtn.style.cursor = 'pointer';
+    }
+  }
+
 }
 
 
@@ -3178,3 +3192,6 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 </body>
 </html>
+
+<script>document.addEventListener('DOMContentLoaded', renderCart);
+</script>
